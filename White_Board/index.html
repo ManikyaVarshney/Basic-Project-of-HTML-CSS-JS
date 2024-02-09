@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Online Whiteboard</title>
+  <link rel="stylesheet" href="style.css"> </head>
+<body>
+  <div id="container">
+    <canvas id="whiteboard"></canvas>
+    <div id="tools">
+      <input type="color" id="colorPicker">
+      <div class="control-label">Line Width:</div>
+      <select id="lineWidth">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+      <button id="clearBtn">Clear</button>
+      <button id="undoBtn">Undo</button>
+    </div>
+  </div>
+  <script src="script.js"></script> </body>
+</html>
