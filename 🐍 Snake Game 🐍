@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yellow Snake Game 🐍</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle, #000000, #1a1a1a);
+    color: #ffeb00;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  h1 {
+    font-size: 38px;
+    text-shadow: 0 0 25px #ffeb00;
+    margin-bottom: 10px;
+  }
+
+  #gameBoard {
+    width: 400px;
+    height: 400px;
+    background: rgba(20, 20, 20, 0.95);
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    grid-template-rows: repeat(20, 1fr);
+    border: 3px solid #ffeb00;
+    border-radius: 12px;
+    box-shadow: 0 0 25px #ffeb00, inset 0 0 15px #ffeb00;
+    position: relative;
+  }
+
+  .snake {
+    position: relative;
+    border-radius: 40%;
+    transition: all 0.1s linear;
+  }
+
+  .snake.head {
+    background: radial-gradient(circle, #ffff66, #ffeb00);
+    box-shadow: 0 0 18px #ffeb00, inset 0 0 5px #fff000;
+  }
+
+  .snake.body {
+    background: radial-gradient(circle, #ffeb00, #ccbb00);
+    box-shadow: 0 0 12px #ffeb00;
+  }
+
+  .snake.tail {
+    background: radial-gradient(circle, #bba800, #665500);
+    box-shadow: 0 0 8px #ffaa00;
+    opacity: 0.85;
+  }
+
+  .food {
+    background: radial-gradient(circle, #ff0066, #ff3399);
+    border-radius: 50%;
+    box-shadow: 0 0 20px #ff3399;
+    animation: pulse 0.7s infinite alternate;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.2); }
+  }
+
+  .eye {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: 0 0 6px #fff;
+  }
+
+  .mouth {
+    width: 10px;
+    height: 3px;
+    background: #000;
+    border-radius: 3px;
+    position: absolute;
+  }
+
+  #score {
+    margin-top: 15px;
+    font-size: 20px;
+    text-shadow: 0 0 10px #ffeb00;
+  }
+
+  #controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+  }
+
+  button {
+    background: #ffeb00;
+    border: none;
+    color: #000;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 0 20px #ffeb00;
+  }
+
+  button:hover {
+    background: #ffee33;
+    box-shadow: 0 0 30px #ffee33, 0 0 40px #ffee33;
+  }
+
+  #gameOver {
+    font-size: 26px;
+    color: #ff0044;
+    margin-top: 10px;
+    display: none;
+    text-shadow: 0 0 20px #ff0044;
+  }
+</style>
+</head>
+<body>
+  <h1>🐍 Yellow Snake Game</h1>
+  <div id="gameBoard"></div>
+  <div id="score">Score: 0</div>
+  <div id="controls">
+    <button id="startBtn">Start</button>
+    <button id="restartBtn">Restart</button>
+  </div>
+  <div id="gameOver">💀 Game Over!</div>
+
+<script>
+  const board = document.getElementById("gameBoard");
+  const scoreDisplay = document.getElementById("score");
+  const gameOverText = document.getElementById("gameOver");
+  const startBtn = document.getElementById("startBtn");
+  const restartBtn = document.getElementById("restartBtn");
+
+  const gridSize = 20;
+  let snake, food, direction, score, speed, gameInterval, running = false;
+  let mouthOpen = false;
+
+  const eatSound = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.wav");
+  const gameOverSound = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-player-losing-or-failing-2042.wav");
+
+  function resetGame() {
+    snake = [{ x: 10, y: 10 }];
+    food = { x: 5, y: 5 };
+    direction = { x: 0, y: 0 };
+    score = 0;
+    speed = 200;
+    mouthOpen = false;
+    running = false;
+    scoreDisplay.textContent = "Score: 0";
+    gameOverText.style.display = "none";
+    drawBoard();
+  }
+
+  function drawBoard() {
+    board.innerHTML = "";
+
+    snake.forEach((segment, i) => {
+      const part = document.createElement("div");
+      part.style.gridRowStart = segment.y;
+      part.style.gridColumnStart = segment.x;
+
+      if (i === 0) {
+        part.classList.add("snake", "head");
+
+        const eye1 = document.createElement("div");
+        const eye2 = document.createElement("div");
+        const mouth = document.createElement("div");
+        eye1.classList.add("eye");
+        eye2.classList.add("eye");
+        mouth.classList.add("mouth");
+
+        // Eye and mouth positioning based on direction
+        if (direction.x === 1) { // moving right
+          eye1.style.top = "6px"; eye1.style.left = "22px";
+          eye2.style.top = "20px"; eye2.style.left = "22px";
+          mouth.style.top = "14px"; mouth.style.left = "28px";
+        } 
+        else if (direction.x === -1) { // moving left
+          eye1.style.top = "6px"; eye1.style.left = "2px";
+          eye2.style.top = "20px"; eye2.style.left = "2px";
+          mouth.style.top = "14px"; mouth.style.left = "-4px";
+        } 
+        else if (direction.y === -1) { // moving up
+          eye1.style.top = "2px"; eye1.style.left = "6px";
+          eye2.style.top = "2px"; eye2.style.left = "20px";
+          mouth.style.top = "-4px"; mouth.style.left = "12px";
+        } 
+        else if (direction.y === 1) { // moving down
+          eye1.style.top = "22px"; eye1.style.left = "6px";
+          eye2.style.top = "22px"; eye2.style.left = "20px";
+          mouth.style.top = "28px"; mouth.style.left = "12px";
+        } 
+        else { // default right
+          eye1.style.top = "6px"; eye1.style.left = "22px";
+          eye2.style.top = "20px"; eye2.style.left = "22px";
+          mouth.style.top = "14px"; mouth.style.left = "28px";
+        }
+
+        if (mouthOpen) mouth.style.background = "#ff6600";
+        else mouth.style.background = "#000";
+
+        part.appendChild(eye1);
+        part.appendChild(eye2);
+        part.appendChild(mouth);
+      } 
+      else if (i === snake.length - 1) {
+        part.classList.add("snake", "tail");
+      } 
+      else {
+        part.classList.add("snake", "body");
+      }
+
+      board.appendChild(part);
+    });
+
+    const foodDiv = document.createElement("div");
+    foodDiv.classList.add("food");
+    foodDiv.style.gridRowStart = food.y;
+    foodDiv.style.gridColumnStart = food.x;
+    board.appendChild(foodDiv);
+  }
+
+  function moveSnake() {
+    const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      eatSound.play();
+      mouthOpen = true;
+      setTimeout(() => mouthOpen = false, 200);
+      scoreDisplay.textContent = "Score: " + score;
+      generateFood();
+      speed = Math.max(80, speed - 5);
+      restartLoop();
+    } else {
+      snake.pop();
+    }
+
+    if (
+      head.x < 1 || head.x > gridSize || head.y < 1 || head.y > gridSize ||
+      snake.slice(1).some(s => s.x === head.x && s.y === head.y)
+    ) {
+      endGame();
+    }
+
+    drawBoard();
+  }
+
+  function generateFood() {
+    food = {
+      x: Math.floor(Math.random() * gridSize) + 1,
+      y: Math.floor(Math.random() * gridSize) + 1
+    };
+  }
+
+  function endGame() {
+    clearInterval(gameInterval);
+    running = false;
+    gameOverText.style.display = "block";
+    gameOverSound.play();
+  }
+
+  function restartLoop() {
+    clearInterval(gameInterval);
+    gameInterval = setInterval(moveSnake, speed);
+  }
+
+  document.addEventListener("keydown", e => {
+    if (!running) return;
+    switch (e.key) {
+      case "ArrowUp": if (direction.y === 0) direction = { x: 0, y: -1 }; break;
+      case "ArrowDown": if (direction.y === 0) direction = { x: 0, y: 1 }; break;
+      case "ArrowLeft": if (direction.x === 0) direction = { x: -1, y: 0 }; break;
+      case "ArrowRight": if (direction.x === 0) direction = { x: 1, y: 0 }; break;
+    }
+  });
+
+  startBtn.addEventListener("click", () => {
+    if (!running) {
+      resetGame();
+      direction = { x: 1, y: 0 };
+      running = true;
+      gameInterval = setInterval(moveSnake, speed);
+    }
+  });
+
+  restartBtn.addEventListener("click", () => {
+    clearInterval(gameInterval);
+    resetGame();
+    direction = { x: 1, y: 0 };
+    running = true;
+    gameInterval = setInterval(moveSnake, speed);
+  });
+
+  resetGame();
+</script>
+</body>
+</html>
